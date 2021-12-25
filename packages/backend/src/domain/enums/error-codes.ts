@@ -8,6 +8,8 @@ export enum ErrorCodes {
     CLIENT_CALLBACK_INVALID  = 'CLIENT_CALLBACK_INVALID',
     NOT_EXIST_CHAT_ROOM = 'NOT_EXIST_CHAT_ROOM',
     CHAT_ROOM_IS_CLOSE = 'CHAT_ROOM_IS_CLOSE',
+	FILE_NAME_IS_EMPTY = 'FILE_NAME_IS_EMPTY',
+	FILE_IS_NOT_EXISTS = 'FILE_IS_NOT_EXISTS',
 };
 
 const _codes: Array<ICodeObject> = [
@@ -52,6 +54,18 @@ const _codes: Array<ICodeObject> = [
 		httpStatus: HttpCodes.BAD_REQ,
 		message: '無效客戶回調網址',
 		code: 2004,
+	},
+	{
+		alias: ErrorCodes.FILE_NAME_IS_EMPTY,
+		httpStatus: HttpCodes.BAD_REQ,
+		message: '檔名不存在',
+		code: 3001,
+	},
+	{
+		alias: ErrorCodes.FILE_IS_NOT_EXISTS,
+		httpStatus: HttpCodes.BAD_REQ,
+		message: '檔案不存在',
+		code: 3002,
 	}
 ];
 

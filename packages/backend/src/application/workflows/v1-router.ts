@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction, Router } from 'express';
 import { CustomResult } from '@demo/app-common';
 import { ClientAuthController } from './client-auth-controller';
-
+import { FileController } from './file-controller';
 export class V1Router {
 	public prefix: string = '/api/v1';
 	public router: Router = Router();
@@ -17,6 +17,7 @@ export class V1Router {
 				await next();
 			});
 		this.router
-			.use(ClientAuthController.build());
+			.use(ClientAuthController.build())
+			.use(FileController.build());
 	}
 }

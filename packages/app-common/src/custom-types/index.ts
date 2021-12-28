@@ -3,7 +3,7 @@ import { MongoClient } from 'mongodb';
 import { Redis } from 'ioredis';
 import { CustomHttpOption } from '../custom-models/custom-http-option';
 import { CustomResult } from '../custom-models/custom-result';
-
+import { CustomStorageFile } from '../custom-models/custom-storage-file';
 export interface ICodeObject {
 	alias: string,
 	code: number,
@@ -38,4 +38,13 @@ export interface ICustomRedisClient {
 	open(): Redis;
 	close(): void;
 	isConnected(): boolean;
+}
+
+export interface ICustomStorageClient {
+	createBucket(name: string): Promise<void>;
+	checkBucketName(name: string): Promise<boolean>;
+	deleteBucket(name: string): Promise<void>;
+	uploadObject(file: CustomStorageFile): Promise<void>;
+	deleteObject(file: CustomStorageFile): Promise<void>;
+	download(file: CustomStorageFile): Promise<ReadableStream>;
 }

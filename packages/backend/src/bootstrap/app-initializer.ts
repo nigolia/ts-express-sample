@@ -9,6 +9,8 @@ import {
 	CustomHttpClient,
 	ICustomRedisClient,
 	CustomRedisClient,
+	ICustomStorageClient,
+	CustomGcsClient,
 } from '@demo/app-common';
 import { InjectorCodes } from '../domain/enums/injector-codes';
 import { AbstractSocketHandler } from '../application/workflows/abstract-socket-handler';
@@ -68,6 +70,12 @@ export class AppInitializer {
 			.bind<ICustomHttpClient>(commonInjectorCodes.I_HTTP_CLIENT)
 			.to(CustomHttpClient)
 			.inSingletonScope();
+
+		/** tools */
+		const client = new CustomGcsClient('./gcs-key-development.json');
+		defaultContainer
+			.bind<ICustomStorageClient>(commonInjectorCodes.I_STORAGE_CLIENT)
+			.toConstantValue(client);
 
 		/** repositories */
 		defaultContainer

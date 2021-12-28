@@ -4,4 +4,6 @@ export const commonInjectorCodes = {
 	I_HTTP_CLIENT: Symbol('iHttpClient'),
 	I_REDIS_CLIENT: Symbol('iRedisClient'),
 	DEFAULT_REDIS_CLIENT: Symbol('defaultRedisClient'),
+	I_STORAGE_CLIENT: Symbol('iStroageClient'),
+	GCS_STORAGE_CLIENT: Symbol('gcsStorageClient'),
 };

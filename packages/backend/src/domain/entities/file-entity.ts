@@ -1,3 +1,4 @@
+import { CustomUtils } from '@demo/app-common';
 export class FileEntity {
     public id: string = '';
     public creator: string = '';
@@ -9,4 +10,8 @@ export class FileEntity {
     public metadata: any;
     public size: number = 0;
     public type: string = '';
+
+    public generateFileName(): void {
+    	this.name = `${CustomUtils.generateUniqueId()}|${this.name}`;
+    }
 }

@@ -3,6 +3,7 @@ import { IClientCredentialDocument, clientCredentialModelName, clientCredentialS
 import { IChatRoomDocument, chatRoomModelName, chatRoomSchema } from './chat-room';
 import { ITokenDocument, tokenModelName, tokenSchema } from './token';
 import { IFileDocument, fileModelName, fileSchema } from './file';
+import { IBucketDocument, bucketModelName, bucketSchema } from './bucket';
 
 export function load(client?: IMongooseClient): void {
 	if (!client) {
@@ -12,6 +13,7 @@ export function load(client?: IMongooseClient): void {
 	client.registerModel<IChatRoomDocument>(chatRoomModelName, chatRoomSchema);
 	client.registerModel<ITokenDocument>(tokenModelName, tokenSchema);
 	client.registerModel<IFileDocument>(fileModelName, fileSchema);
+	client.registerModel<IBucketDocument>(bucketModelName, bucketSchema);
 }
 
 
@@ -20,4 +22,5 @@ export {
 	IChatRoomDocument,
 	ITokenDocument,
 	IFileDocument,
+	IBucketDocument,
 };

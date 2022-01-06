@@ -6,6 +6,7 @@ export { CustomError } from './custom-models/custom-error';
 export { CustomResult } from './custom-models/custom-result';
 export { CustomHttpOption } from './custom-models/custom-http-option';
 export { CustomStorageFile } from './custom-models/custom-storage-file';
+export { CustomStorageBucket } from './custom-models/custom-storage-bucket';
 export { customArgvs } from './custom-tools/custom-argvs';
 export { getId as getTraceId, defaultNameSpace } from './custom-tools/custom-request-tracer';
 export { CustomUtils } from './custom-tools/custom-utils';

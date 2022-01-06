@@ -24,7 +24,8 @@ import { ITokenRepository } from '../domain/repositories/i-token-repository';
 import { TokenRepository } from '../infra/repositories/token-repository';
 import { IFileRepository } from '../domain/repositories/i-file-repository';
 import { FileRepository } from '../infra/repositories/file-repository';
-
+import { IBucketRepository } from '../domain/repositories/i-bucket-repository';
+import { BucketRepository } from '../infra/repositories/bucket-repository';
 export class AppInitializer {
 
 	static async tryDbClient(): Promise<void> {
@@ -86,6 +87,8 @@ export class AppInitializer {
 			.bind<ITokenRepository>(InjectorCodes.I_TOKEN_REPO).to(TokenRepository).inSingletonScope();
 		defaultContainer
 			.bind<IFileRepository>(InjectorCodes.I_FILE_REPO).to(FileRepository).inSingletonScope();
+		defaultContainer
+			.bind<IBucketRepository>(InjectorCodes.I_BUCKET_REPO).to(BucketRepository).inSingletonScope();
 
 		/** socket handlers */
 		defaultContainer

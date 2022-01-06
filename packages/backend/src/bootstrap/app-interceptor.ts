@@ -52,10 +52,10 @@ export class AppInterceptor {
 		if (cReq.files) {
 			const files = Object.keys(cReq.files);
 			files.forEach((x) => {
-				const ary = cReq.files[x];
-				if (CustomValidator.nonEmptyArray(ary)) {
-					ary.forEach((f) => tasks.push(fs.unlink(f.path)));
-				}
+				// const ary = cReq.files[x];
+				// if (CustomValidator.nonEmptyArray(ary)) {
+				// 	ary.forEach((f) => tasks.push(fs.unlink(f.path)));
+				// }
 			});
 		}
 		if (CustomValidator.nonEmptyArray(tasks)) {

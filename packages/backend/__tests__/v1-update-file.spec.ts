@@ -38,7 +38,7 @@ describe('Update file spec', () => {
 		entity.creator = new ObjectId().toHexString();
 		entity.name = 'BBB';
 		entity.destination = '/XXX/BBBB';
-		entity = await fileRepo.save(entity) as FileEntity;
+		entity = await fileRepo.update(entity) as FileEntity;
 		done();
 	});
 	afterAll(async (done) => {

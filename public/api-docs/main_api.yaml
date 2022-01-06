@@ -4,7 +4,7 @@ info:
   description: ""
   version: 0.0.3
 servers:
-  - url: http://localhost:9000/api/{apiVer}
+  - url: http://127.0.0.1:9000/api/{apiVer}
     description: The api server
     variables:
       apiVer:
@@ -15,6 +15,191 @@ tags:
   - name: Credential
     description: 認證
 paths:
+  # ============================   儲存桶   =================================
+  /storage/b/:bucketName:
+    post:
+      summary: 建立儲存桶
+      description: ''
+      tags:
+      - 儲存桶
+      parameters:
+        - in: path
+          name: bucketName
+          description: '儲存桶名稱'
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - policy
+              type: object
+              properties:
+                policy:
+                  type: array
+                  description: 政策
+                  items:
+                    $ref: "#/components/schemas/Policy"
+                cors:
+                  type: array
+                  description: 跨來源資源共用
+                  items:
+                    $ref: "#/components/schemas/Cors"
+                lifecycle:
+                  $ref: "#/components/schemas/Lifecycle"
+                  description: 生命週期設定
+      responses:
+        "200":
+          description: Success
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  traceId:
+                    type: string
+                  code:
+                    type: integer
+                    format: Int32
+                  message:
+                    type: string
+                  result:
+                    $ref: "#/components/schemas/ResponseEmptyResult"
+    patch:
+      summary: 更新儲存桶
+      description: ''
+      tags:
+      - 儲存桶
+      parameters:
+        - in: path
+          name: bucketName
+          description: '儲存桶名稱'
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - policy
+              type: object
+              properties:
+                policy:
+                  type: array
+                  description: 政策
+                  items:
+                    $ref: "#/components/schemas/Policy"
+                cors:
+                  type: array
+                  description: 跨來源資源共用
+                  items:
+                    $ref: "#/components/schemas/Cors"
+                lifecycle:
+                  $ref: "#/components/schemas/Lifecycle"
+                  description: 生命週期設定
+      responses:
+        "200":
+          description: Success
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  traceId:
+                    type: string
+                  code:
+                    type: integer
+                    format: Int32
+                  message:
+                    type: string
+                  result:
+                    $ref: "#/components/schemas/ResponseEmptyResult"
+  # ============================   物  件   =================================
+  /storage/b/:bucketName/o:
+    post:
+      summary: 上傳物件
+      description: ''
+      tags:
+      - 物件
+      parameters:
+        - in: path
+          name: bucketName
+          description: '儲存桶名稱'
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              required:
+                - file
+                - data
+              type: object
+              properties:
+                file:
+                  type: string
+                  description: 上傳檔案
+                  format: binary
+                data:
+                  type: string
+                  description: 檔案描述
+      responses:
+        "200":
+          description: Success
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  traceId:
+                    type: string
+                  code:
+                    type: integer
+                    format: Int32
+                  message:
+                    type: string
+                  result:
+                    $ref: "#/components/schemas/ResponseEmptyResult"
+  /storage/b/:bucketName/o/:fileId:
+    get:
+      summary: 下載物件
+      description: ''
+      tags:
+      - 物件
+      parameters:
+        - in: path
+          name: bucketName
+          description: '儲存桶名稱'
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: fileId
+          description: '物件ID'
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  traceId:
+                    type: string
+                  code:
+                    type: integer
+                    format: Int32
+                  message:
+                    type: string
+                  result:
+                    $ref: "#/components/schemas/ResponseEmptyResult"
   /client-auth:
     post:
       tags:
@@ -175,4 +360,64 @@ components:
             description: 連絡者地址
           gender:
             type: number
-            description: 連絡者性別
+          description: 連絡者性別
+    Policy:
+      type: object
+      properties:
+        principle:
+          type: string
+          description: 原則
+        resource:
+          type: string
+          description: 可用資源
+      example: {
+        "principal": { "companyId": "58ff" },
+        "resource": [ ". /${companyId}/${account}/*" ]
+      }
+    Cors:
+      type: object
+      properties:
+        origin:
+          type: array
+          description: 允許進行跨域資源共享的網域
+          items:
+            type: string
+        method:
+          type: array
+          description: 允許與此存儲區域進行跨域資源共享的HTTP方法
+          items:
+            type: string
+      example: {
+        "origin": "https://luna.compal-health.com",
+        "method": [ "POST", "GET", "DELETE" ],
+        "responseHeader": [ "Content-Type" ],
+        "maxAgeSeconds": 3600
+      }
+    Lifecycle:
+      type: object
+      properties:
+        rule:
+          type: array
+          description: 生命週期設定
+          items:
+            type: object
+            properties:
+              action:
+                type: object
+                properties:
+                  type:
+                    type: string
+              condition:
+                type: object
+                properties:
+                  age:
+                    type: number
+      example: {
+        "rule": [
+          {
+    				"action": { "type": "Delete" },
+    				"condition": { "age": 14 }
+          }
+        ]
+      }
+

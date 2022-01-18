@@ -11,115 +11,49 @@ import {
 	ICustomStorageClient,
 	CustomStorageBucket,
 	lazyInject,
+	lazyInjectNamed,
 } from '@demo/app-common';
 import { ModelCodes } from '../../domain/enums/model-codes';
+import { ErrorCodes } from '../../domain/enums/error-codes';
 import { IBucketDocument } from '../../infra/orm-models';
 import { BucketEntity } from '../../domain/entities/bucket-entity';
 import { IBucketRepository } from '../../domain/repositories/i-bucket-repository';
-import { FileEntity } from 'backend/src/domain/entities/file-entity';
 
 @injectable()
 export class BucketRepository implements IBucketRepository {
-    private _defaultClient: IMongooseClient;
-    private _client: ICustomStorageClient;
+    @lazyInjectNamed(commonInjectorCodes.I_MONGOOSE_CLIENT, commonInjectorCodes.DEFAULT_MONGO_CLIENT)
+	private _defaultClient: TNullable<IMongooseClient>;
+    @lazyInject(commonInjectorCodes.I_STORAGE_CLIENT)
+	private _client: TNullable<ICustomStorageClient>;
 
-    constructor(
-		@inject(commonInjectorCodes.I_MONGOOSE_CLIENT) @named(commonInjectorCodes.DEFAULT_MONGO_CLIENT) defaultClient: IMongooseClient,
-        @inject(commonInjectorCodes.I_STORAGE_CLIENT) client: ICustomStorageClient
-    ) {
-    	this._defaultClient = defaultClient;
-    	this._client = client;
-    }
     create = async (entity: TNullable<BucketEntity>, storageBucket: CustomStorageBucket): Promise<TNullable<BucketEntity>> => {
     	if (!entity || !storageBucket) {
     		return undefined;
     	}
     	try {
+    		// cloud storage create bucket
     		await this._client?.createBucket(storageBucket.bucketName);
-    		console.log(`BucketEntity: ${BucketEntity}`);
-    		// db create file record
-    		const col = this._defaultClient.getModel<IBucketDocument>(ModelCodes.BUCKET);
+    	} catch (ex) {
+    		// console.log('ex: ', JSON.stringify(ex, undefined, 2));
+    		throw new CustomError(ErrorCodes.BUCKET_IS_ALREADY_EXISTS);
+    	}
+
+    	try {
+    		// db create bucket document
+    		const col = this._defaultClient?.getModel<IBucketDocument>(ModelCodes.BUCKET);
     		let obj = <IBucketDocument>{
-    		// 	creator: entity.creator,
-    		// 	modifier: entity.creator,
-    		// 	bucketId: entity.bucketId,
-    		// 	platform: entity.platform,
+    			platform: entity.platform,
     			name: entity.name,
-    		// 	destination: entity.destination,
-    		// 	metadata: entity.metadata,
-    		// 	size: entity.size,
-    		// 	type: entity.type,
+    			policy: entity.policy,
+    			cors: entity.cors,
+    			lifecycle: entity.lifecycle,
     		};
-    		obj = await col.create(obj);
+    		obj = await col?.create(obj) as IBucketDocument;
     		entity.id = obj.id.toString();
 
     		return entity;
     	} catch (ex) {
-    		console.log('ex: ', ex);
-    		const err = CustomError.fromInstance(ex)
-    			.useError(cmmErr.ERR_EXEC_DB_FAIL);
-
-    		LOGGER.error(`DB operations fail, ${err.stack}`);
-    		throw err;
-    	}
-    }
-    update(entity: TNullable<BucketEntity>): Promise<TNullable<BucketEntity>> {
-    	throw new Error('Method not implemented.');
-    }
-    findOneByName = async (name: string): Promise<TNullable<BucketEntity>> => {
-    	if (!CustomValidator.nonEmptyString(name)) {
-    		return undefined;
-    	}
-    	try {
-    		const col = this._defaultClient.getModel<IBucketDocument>(ModelCodes.BUCKET);
-    		const q = {
-    			name,
-    		};
-    		const doc: IBucketDocument = await col.findOne(q).lean();
-    		return this._transform(doc);
-    	} catch (ex) {
-    		const err = CustomError.fromInstance(ex)
-    			.useError(cmmErr.ERR_EXEC_DB_FAIL);
-
-    		LOGGER.error(`DB operations fail, ${err.stack}`);
-    		throw err;
-    	}
-    }
-
-	private _transform = (doc: TNullable<IBucketDocument>): TNullable<BucketEntity> => {
-    	if (!doc) {
-    		return undefined;
-    	}
-    	const obj = CustomClassBuilder.build(BucketEntity, doc) as BucketEntity;
-    	obj.id = doc._id.toString();
-    	return obj;
-	}
-	/*
-    create = async (entity: TNullable<BucketEntity>, storageFile: CustomStorageFile): Promise<TNullable<BucketEntity>> => {
-    	if (!entity || !storageFile) {
-    		return undefined;
-    	}
-    	try {
-    		// await this._client?.createFile(storageFile);
-    		// db create file record
-    		const col = this._defaultClient.getModel<IBucketDocument>(ModelCodes.BUCKET);
-    		// let obj = <IFileDocument>{
-    		// 	creator: entity.creator,
-    		// 	modifier: entity.creator,
-    		// 	bucketId: entity.bucketId,
-    		// 	platform: entity.platform,
-    		// 	name: entity.name,
-    		// 	destination: entity.destination,
-    		// 	metadata: entity.metadata,
-    		// 	size: entity.size,
-    		// 	type: entity.type,
-    		// };
-    		obj = await col.create(obj);
-    		entity.id = obj.id.toString();
-
-    		return entity;
-    	} catch (ex) {
-    		console.log('ex: ', ex);
+    		// console.log('ex: ', ex);
     		const err = CustomError.fromInstance(ex)
     			.useError(cmmErr.ERR_EXEC_DB_FAIL);
 
@@ -131,27 +65,35 @@ export class BucketRepository implements IBucketRepository {
     	if (!entity) {
     		return undefined;
     	}
-    	const col = this._defaultClient.getModel<IBucketDocument>(ModelCodes.FILE);
-    	if (!CustomValidator.nonEmptyString(entity.id)) {
+    	const col = this._defaultClient?.getModel<IBucketDocument>(ModelCodes.BUCKET);
+    	if (!CustomValidator.nonEmptyString(entity.name)) {
     		return undefined;
     	}
-    	let obj = <IBucketDocument>{
+    	const q = {
     		name: entity.name,
-    		metadata: entity.metadata,
+    		platform: entity.platform,
+    		valid: true,
     	};
-    	await col.updateOne({ id: entity.id }, { $set: obj });
+    	let obj = <IBucketDocument>{
+    		policy: entity.policy,
+    		cors: entity.cors,
+    		lifecycle: entity.lifecycle,
+    	};
+    	await col?.updateOne(q, { $set: obj });
+	
     	return entity;
     }
-    findOne = async (id: string): Promise<TNullable<BucketEntity>> => {
-    	if (!CustomValidator.nonEmptyString(id)) {
+    findOneByName = async (name: string): Promise<TNullable<BucketEntity>> => {
+    	if (!CustomValidator.nonEmptyString(name)) {
     		return undefined;
     	}
     	try {
-    		const col = this._defaultClient.getModel<IBucketDocument>(ModelCodes.BUCKET);
+    		const col = this._defaultClient?.getModel<IBucketDocument>(ModelCodes.BUCKET);
     		const q = {
-    			id,
+    			name,
+    			valid: true,
     		};
-    		const doc: IBucketDocument = await col.findOne(q).lean();
+    		const doc = await col?.findOne(q).lean() as IBucketDocument;
     		return this._transform(doc);
     	} catch (ex) {
     		const err = CustomError.fromInstance(ex)
@@ -161,5 +103,69 @@ export class BucketRepository implements IBucketRepository {
     		throw err;
     	}
     }
-	*/
+	delete = async (name: string): Promise<void> => {
+		if (!CustomValidator.nonEmptyString(name)) {
+    		return undefined;
+    	}
+		try {
+			const response = await this._client?.deleteBucket(name);
+			if (!response) {
+				throw new Error('gcs bucket delete faild');
+			}
+			const col = this._defaultClient?.getModel<IBucketDocument>(ModelCodes.BUCKET);
+			const q = {
+    			name,
+    		};
+			const obj = {
+				name: `${name}_delete_${Date.now()}`,
+				valid: false,
+				invalidTime: new Date(),
+			};
+    		await col?.updateOne(q, { $set: obj }).lean();
+		} catch (ex) {
+			console.log('~~~ex: ', ex);
+    		const err = CustomError.fromInstance(ex)
+    			.useError(cmmErr.ERR_EXEC_DB_FAIL);
+
+    		LOGGER.error(`DB operations fail, ${err.stack}`);
+    		throw err;
+    	}
+	}
+	list = async (entity: TNullable<BucketEntity>): Promise<TNullable<BucketEntity[]>> => {
+		if (!entity) {
+    		return undefined;
+    	}
+		const platform = entity?.platform;
+		if (!CustomValidator.nonEmptyString(platform)) {
+			return undefined;
+		}
+		try {
+    		const col = this._defaultClient?.getModel<IBucketDocument>(ModelCodes.BUCKET);
+    		const q = {
+    			platform,
+				valid: true,
+    		};
+    		const docs: IBucketDocument[] = await col?.find(q).lean() as IBucketDocument[];
+			const results: TNullable<BucketEntity[]> = [];
+			for (const doc of docs) {
+				results.push(this._transform(doc) as BucketEntity);
+			}
+    		return results;
+    	} catch (ex) {
+    		const err = CustomError.fromInstance(ex)
+    			.useError(cmmErr.ERR_EXEC_DB_FAIL);
+
+    		LOGGER.error(`DB operations fail, ${err.stack}`);
+    		throw err;
+    	}
+	}
+
+	private _transform = (doc: TNullable<IBucketDocument>): TNullable<BucketEntity> => {
+    	if (!doc) {
+    		return undefined;
+    	}
+    	const obj = CustomClassBuilder.build(BucketEntity, doc) as BucketEntity;
+    	obj.id = doc._id.toString();
+    	return obj;
+	}
 }

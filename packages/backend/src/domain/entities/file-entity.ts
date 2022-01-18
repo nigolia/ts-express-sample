@@ -7,6 +7,7 @@ export class FileEntity {
     public bucketId: string = '';
     public name: string = '';
     public destination: string = '';
+    public mimetype: string = '';
     public metadata: any;
     public size: number = 0;
     public type: string = '';

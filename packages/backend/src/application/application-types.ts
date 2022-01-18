@@ -16,6 +16,7 @@ interface IMulterFile {
 export interface ICustomExpressRequest extends Request {
 	// file: IMulterFile;
 	// files: Record<string, Array<IMulterFile>>;
+	token: any;
 };
 
 export const handleExpressAsync = (fn: any) => (req: Request, res: Response, next: NextFunction) => Promise.resolve(fn(req, res, next)).catch(next);

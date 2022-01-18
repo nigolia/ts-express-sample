@@ -43,8 +43,8 @@ export interface ICustomRedisClient {
 export interface ICustomStorageClient {
 	createBucket(name: string): Promise<void>;
 	checkBucketName(name: string): Promise<boolean>;
-	deleteBucket(name: string): Promise<void>;
+	deleteBucket(name: string): Promise<boolean>;
 	createFile(storageFile: CustomStorageFile): Promise<void>;
 	deleteObject(storageFile: CustomStorageFile): Promise<void>;
-	download(storageFile: CustomStorageFile): Promise<ReadableStream>;
+	download(storageFile: CustomStorageFile): Promise<Buffer>;
 }

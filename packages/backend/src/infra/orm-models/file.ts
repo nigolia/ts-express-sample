@@ -14,6 +14,7 @@ interface IDocumentModel {
     bucketId: string,
     name: string,
     destination: string,
+	mimetype: string,
     metadata: any,
     size: number,
     type: string,
@@ -26,10 +27,10 @@ export const fileSchema = new Schema({
 		type: Date,
 	},
 	creator: {
-		type: Types.ObjectId,
+		type: String,
 	},
 	modifier: {
-		type: Types.ObjectId,
+		type: String,
 	},
 	valid: {
 		type: Boolean,
@@ -48,6 +49,10 @@ export const fileSchema = new Schema({
 		required: true,
 	},
 	destination: {
+		type: String,
+		required: true,
+	},
+	mimetype: {
 		type: String,
 		required: true,
 	},

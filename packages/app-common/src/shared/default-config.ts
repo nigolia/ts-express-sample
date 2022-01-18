@@ -8,6 +8,7 @@ import { TNullable } from '../custom-types';
 interface IConfig {
 	ENABLE_CACHE: boolean,
 	ENABLE_WS: boolean,
+	TOKEN_SECRET: string,
 	DEFAULT_MONGO: {
 		URI: string;
 		USER?: string;

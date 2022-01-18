@@ -1,5 +1,6 @@
 import { PolicyValueObject } from '../value-objects/policy-value-object';
 import { CorsValueObject } from '../value-objects/cors-value-object';
+import { LifecycleValueObject } from '../value-objects/lifecycle-value-object';
 
 export class BucketEntity {
     public id: string = '';
@@ -10,5 +11,5 @@ export class BucketEntity {
     public name: string = '';
     public policy: PolicyValueObject[] = [];
 	public cors: CorsValueObject[] = [];
-	// public lifecycle: any;
+	public lifecycle: LifecycleValueObject = { rule: []};
 }

@@ -1,6 +1,6 @@
 openapi: 3.0.1
 info:
-  title: chat room service
+  title: Storage Service
   description: ""
   version: 0.0.3
 servers:
@@ -11,17 +11,54 @@ servers:
         default: v1
         enum:
           - v1
-tags:
-  - name: Credential
-    description: 認證
+# tags:
+#   - name: Credential
+#     description: 認證
 paths:
+  # ============================   應用端   =================================
+  # /employee/getServiceToken:
+  #   post:
+  #     summary: 取得共用服務的Access Token
+  #     description: ''
+  #     tags:
+  #     - 應用端
+  #     requestBody:
+  #       content:
+  #         application/json:
+  #           schema:
+  #             required:
+  #               - service
+  #             type: object
+  #             properties:
+  #               service:
+  #                 type: string
+  #                 description: 平台(共用)服務名稱
+  #     responses:
+  #       "200":
+  #         description: Success
+  #         content:
+  #           "*/*":
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 traceId:
+  #                   type: string
+  #                 code:
+  #                   type: integer
+  #                   format: Int32
+  #                 message:
+  #                   type: string
+  #                 result:
+  #                   $ref: "#/components/schemas/ResponseEmptyResult"
   # ============================   儲存桶   =================================
-  /storage/b/:bucketName:
+  /storage/b/{bucketName}:
     post:
       summary: 建立儲存桶
       description: ''
+      security:
+        - bearerAuth: []
       tags:
-      - 儲存桶
+        - 儲存桶
       parameters:
         - in: path
           name: bucketName
@@ -29,6 +66,7 @@ paths:
           required: true
           schema:
             type: string
+          example: andy-bucket-test
       requestBody:
         content:
           application/json:
@@ -67,11 +105,19 @@ paths:
                     type: string
                   result:
                     $ref: "#/components/schemas/ResponseEmptyResult"
+        "400":
+          description: Bad request
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     patch:
-      summary: 更新儲存桶
+      summary: 設定儲存桶
       description: ''
+      security:
+        - bearerAuth: []
       tags:
-      - 儲存桶
+        - 儲存桶
       parameters:
         - in: path
           name: bucketName
@@ -79,6 +125,7 @@ paths:
           required: true
           schema:
             type: string
+          example: andy-bucket-test
       requestBody:
         content:
           application/json:
@@ -100,6 +147,63 @@ paths:
                 lifecycle:
                   $ref: "#/components/schemas/Lifecycle"
                   description: 生命週期設定
+      responses:
+        "200":
+          description: Success
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  traceId:
+                    type: string
+                  code:
+                    type: integer
+                    format: Int32
+                  message:
+                    type: string
+                  result:
+                    $ref: "#/components/schemas/ResponseEmptyResult"
+    delete:
+      summary: 刪除儲存桶
+      description: ''
+      security:
+        - bearerAuth: []
+      tags:
+        - 儲存桶
+      parameters:
+        - in: path
+          name: bucketName
+          description: '儲存桶名稱'
+          required: true
+          schema:
+            type: string
+          example: andy-bucket-test
+      responses:
+        "200":
+          description: Success
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  traceId:
+                    type: string
+                  code:
+                    type: integer
+                    format: Int32
+                  message:
+                    type: string
+                  result:
+                    $ref: "#/components/schemas/ResponseEmptyResult"
+  /storage/b:
+    get:
+      summary: 查詢儲存桶列表
+      description: ''
+      security:
+        - bearerAuth: []
+      tags:
+        - 儲存桶
       responses:
         "200":
           description: Success
@@ -118,12 +222,14 @@ paths:
                   result:
                     $ref: "#/components/schemas/ResponseEmptyResult"
   # ============================   物  件   =================================
-  /storage/b/:bucketName/o:
+  /storage/b/{bucketName}/o:
     post:
       summary: 上傳物件
       description: ''
+      security:
+        - bearerAuth: []
       tags:
-      - 物件
+        - 物件
       parameters:
         - in: path
           name: bucketName
@@ -131,6 +237,7 @@ paths:
           required: true
           schema:
             type: string
+          example: andy-bucket-test
       requestBody:
         content:
           multipart/form-data:
@@ -147,6 +254,7 @@ paths:
                 data:
                   type: string
                   description: 檔案描述
+                  example: eyJ0YXJnZXQiOiJ1cGxvYWQifQ==
       responses:
         "200":
           description: Success
@@ -164,12 +272,14 @@ paths:
                     type: string
                   result:
                     $ref: "#/components/schemas/ResponseEmptyResult"
-  /storage/b/:bucketName/o/:fileId:
+  /storage/b/{bucketName}/o/{fileId}:
     get:
       summary: 下載物件
       description: ''
+      security:
+        - bearerAuth: []
       tags:
-      - 物件
+        - 物件
       parameters:
         - in: path
           name: bucketName
@@ -177,6 +287,7 @@ paths:
           required: true
           schema:
             type: string
+          example: andy-bucket-test
         - in: path
           name: fileId
           description: '物件ID'
@@ -200,27 +311,39 @@ paths:
                     type: string
                   result:
                     $ref: "#/components/schemas/ResponseEmptyResult"
-  /client-auth:
-    post:
+    patch:
+      summary: 設定物件
+      description: ''
+      security:
+        - bearerAuth: []
       tags:
-        - Credential
-      summary: 應用註冊
-      parameters: []
+        - 物件
+      parameters:
+        - in: path
+          name: bucketName
+          description: '儲存桶名稱'
+          required: true
+          schema:
+            type: string
+          example: andy-bucket-test
+        - in: path
+          name: fileId
+          description: '物件ID'
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
             schema:
-              required:
-                - name
-                - callbackUrl
               type: object
               properties:
                 name:
                   type: string
-                  description: 應用名稱
-                callbackUrl:
-                  type: string
-                  description: 應用端身份認證路徑
+                  description: 檔案名稱
+                metadata:
+                  type: object
+                  description: 詮釋資料
       responses:
         "200":
           description: Success
@@ -237,29 +360,106 @@ paths:
                   message:
                     type: string
                   result:
-                    $ref: "#/components/schemas/ResponseOfClientRegistered"
-        "400":
-          description: Bad request
+                    $ref: "#/components/schemas/ResponseEmptyResult"
+    delete:
+      summary: 刪除物件
+      description: ''
+      security:
+        - bearerAuth: []
+      tags:
+        - 物件
+      parameters:
+        - in: path
+          name: bucketName
+          description: '儲存桶名稱'
+          required: true
+          schema:
+            type: string
+          example: andy-bucket-test
+        - in: path
+          name: fileId
+          description: '物件ID'
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
           content:
             "*/*":
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal server error
-          content:
-            "*/*":
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-      x-codegen-request-body-name: body
+                type: object
+                properties:
+                  traceId:
+                    type: string
+                  code:
+                    type: integer
+                    format: Int32
+                  message:
+                    type: string
+                  result:
+                    $ref: "#/components/schemas/ResponseEmptyResult"
+  # /client-auth:
+  #   post:
+  #     tags:
+  #       - Credential
+  #     summary: 應用註冊
+  #     parameters: []
+  #     requestBody:
+  #       content:
+  #         application/json:
+  #           schema:
+  #             required:
+  #               - name
+  #               - callbackUrl
+  #             type: object
+  #             properties:
+  #               name:
+  #                 type: string
+  #                 description: 應用名稱
+  #               callbackUrl:
+  #                 type: string
+  #                 description: 應用端身份認證路徑
+  #     responses:
+  #       "200":
+  #         description: Success
+  #         content:
+  #           "*/*":
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 traceId:
+  #                   type: string
+  #                 code:
+  #                   type: integer
+  #                   format: Int32
+  #                 message:
+  #                   type: string
+  #                 result:
+  #                   $ref: "#/components/schemas/ResponseOfClientRegistered"
+  #       "400":
+  #         description: Bad request
+  #         content:
+  #           "*/*":
+  #             schema:
+  #               $ref: "#/components/schemas/ErrorResponse"
+  #       "500":
+  #         description: Internal server error
+  #         content:
+  #           "*/*":
+  #             schema:
+  #               $ref: "#/components/schemas/ErrorResponse"
+  #     x-codegen-request-body-name: body
       
 components:
   securitySchemes:
     BasicAuth:
       type: http
       scheme: basic
-    BearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
+      bearerFormat: JWT
   schemas:
     # 預設
     ErrorResponse:

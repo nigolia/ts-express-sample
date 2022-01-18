@@ -30,13 +30,14 @@ export const bucketSchema = new Schema({
 		type: Date,
 	},
 	creator: {
-		type: Types.ObjectId,
+		type: String,
 	},
 	modifier: {
-		type: Types.ObjectId,
+		type: String,
 	},
 	valid: {
 		type: Boolean,
+		default: true,
 	},
 	platform: {
 		type: String,

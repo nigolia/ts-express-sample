@@ -18,12 +18,8 @@ export class UploadFileRequest {
     }
     public decodeData = (): void => {
     	try {
-    		// const test = '';
     		const str = CustomUtils.fromBase64ToString(this.data);
-    		// const str = '{"target":"john", "age":22, "class":"mca"}';
-    		const obj = JSON.parse(str);
     		this._metadata = JSON.parse(str) as IMetadata;
-    		console.log(`this._metadata: ${this._metadata}`);
     	} catch (ex) {
     		const err = CustomError.fromInstance(ex);
 

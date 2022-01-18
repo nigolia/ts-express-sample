@@ -1,12 +1,13 @@
 {
   "ENABLE_CACHE": false,
   "ENABLE_WS": true,
+  "TOKEN_SECRET": "afd721b6-8d17-41f5-8659-c4df9a208c85",
   "DEFAULT_MONGO": {
-    "URI": "mongodb://localhost:27018/ccrc_test",
+    "URI": "mongodb://localhost:27018/storage",
     "USER": "",
     "PASS": "",
     "POOL_SIZE": 10,
-    "DB_NAME": "ccrc_test"
+    "DB_NAME": "storage"
   },
   "DEFAULT_REDIS": {
     "URI": "redis://hellokitty@localhost:6379/0",

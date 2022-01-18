@@ -10,6 +10,8 @@ import {
 	CustomError,
 	ICustomStorageClient,
 	CustomStorageFile,
+	lazyInject,
+	lazyInjectNamed,
 } from '@demo/app-common';
 import { ModelCodes } from '../../domain/enums/model-codes';
 import { IFileDocument } from '../../infra/orm-models';
@@ -18,24 +20,20 @@ import { IFileRepository } from '../../domain/repositories/i-file-repository';
 
 @injectable()
 export class FileRepository implements IFileRepository {
-    private _defaultClient: IMongooseClient;
-    private _client: ICustomStorageClient;
+	@lazyInjectNamed(commonInjectorCodes.I_MONGOOSE_CLIENT, commonInjectorCodes.DEFAULT_MONGO_CLIENT)
+    private _defaultClient: TNullable<IMongooseClient>;
+	@lazyInject(commonInjectorCodes.I_STORAGE_CLIENT)
+    private _client: TNullable<ICustomStorageClient>;
 
-    constructor(
-		@inject(commonInjectorCodes.I_MONGOOSE_CLIENT) @named(commonInjectorCodes.DEFAULT_MONGO_CLIENT) defaultClient: IMongooseClient,
-        @inject(commonInjectorCodes.I_STORAGE_CLIENT) client: ICustomStorageClient
-    ) {
-    	this._defaultClient = defaultClient;
-    	this._client = client;
-    }
     upload = async (entity: TNullable<FileEntity>, storageFile: CustomStorageFile): Promise<TNullable<FileEntity>> => {
     	if (!entity || !storageFile) {
     		return undefined;
     	}
     	try {
+    		// upload file to cloud storage
     		await this._client?.createFile(storageFile);
-    		// db create file record
-    		const col = this._defaultClient.getModel<IFileDocument>(ModelCodes.FILE);
+    		// create file document to db
+    		const col = this._defaultClient?.getModel<IFileDocument>(ModelCodes.FILE);
     		let obj = <IFileDocument>{
     			creator: entity.creator,
     			modifier: entity.creator,
@@ -43,16 +41,16 @@ export class FileRepository implements IFileRepository {
     			platform: entity.platform,
     			name: entity.name,
     			destination: entity.destination,
+    			mimetype: entity.mimetype,
     			metadata: entity.metadata,
     			size: entity.size,
     			type: entity.type,
     		};
-    		obj = await col.create(obj);
+    		obj = await col?.create(obj) as IFileDocument;
     		entity.id = obj.id.toString();
 
     		return entity;
     	} catch (ex) {
-    		console.log('ex: ', ex);
     		const err = CustomError.fromInstance(ex)
     			.useError(cmmErr.ERR_EXEC_DB_FAIL);
 
@@ -64,7 +62,7 @@ export class FileRepository implements IFileRepository {
     	if (!entity) {
     		return undefined;
     	}
-    	const col = this._defaultClient.getModel<IFileDocument>(ModelCodes.FILE);
+    	const col = this._defaultClient?.getModel<IFileDocument>(ModelCodes.FILE);
     	// if (!CustomValidator.nonEmptyString(entity.id)) {
     	// 	return undefined;
     	// }
@@ -77,11 +75,12 @@ export class FileRepository implements IFileRepository {
     				platform: entity.platform,
     				name: entity.name,
     				destination: entity.destination,
+    				mimetype: entity.mimetype,
     				metadata: entity.metadata,
     				size: entity.size,
     				type: entity.type,
     			};
-    			obj = await col.create(obj); 
+    			obj = await col?.create(obj) as IFileDocument; 
     			entity.id = obj.id.toString();
     			return entity;
     		} catch (ex) {
@@ -96,19 +95,20 @@ export class FileRepository implements IFileRepository {
     		name: entity.name,
     		metadata: entity.metadata,
     	};
-    	await col.updateOne({ id: entity.id }, { $set: obj });
+    	await col?.updateOne({ id: entity.id }, { $set: obj });
+
     	return entity;
     }
-    findOne = async (id: string): Promise<TNullable<FileEntity>> => {
-    	if (!CustomValidator.nonEmptyString(id)) {
+    findOne = async (_id: string): Promise<TNullable<FileEntity>> => {
+    	if (!CustomValidator.nonEmptyString(_id)) {
     		return undefined;
     	}
     	try {
-    		const col = this._defaultClient.getModel<IFileDocument>(ModelCodes.FILE);
+    		const col = this._defaultClient?.getModel<IFileDocument>(ModelCodes.FILE);
     		const q = {
-    			id,
+    			_id,
     		};
-    		const doc: IFileDocument = await col.findOne(q).lean();
+    		const doc: IFileDocument = await col?.findOne(q).lean() as IFileDocument;
     		return this._transform(doc);
     	} catch (ex) {
     		const err = CustomError.fromInstance(ex)
@@ -118,6 +118,22 @@ export class FileRepository implements IFileRepository {
     		throw err;
     	}
     }
+	download = async (file: FileEntity, storageFile: CustomStorageFile): Promise<Buffer> => {
+		try {
+			if (!this._client) {
+				throw new Error('_client is required');
+			}
+			storageFile.target = file.destination;
+
+			return this._client.download(storageFile);
+		} catch (ex) {
+    		const err = CustomError.fromInstance(ex)
+    			.useError(cmmErr.ERR_EXEC_DB_FAIL);
+
+    		LOGGER.error(`DB operations fail, ${err.stack}`);
+    		throw err;
+    	}
+	}
 
     private _transform = (doc: TNullable<IFileDocument>): TNullable<FileEntity> => {
     	if (!doc) {

@@ -2,7 +2,7 @@ import * as util from 'util';
 import { ObjectId } from 'mongodb';
 import * as superTest from 'supertest';
 import { mock } from 'jest-mock-extended';
-import { defaultContainer, ICustomStorageClient, IMongooseClient, CustomStorageBucket, commonInjectorCodes } from '@demo/app-common';
+import { defaultContainer, IMongooseClient, CustomStorageBucket, commonInjectorCodes } from '@demo/app-common';
 import { AppInitializer } from '../src/bootstrap/app-initializer';
 import { App } from '../src/bootstrap/app';
 import { InjectorCodes } from '../src/domain/enums/injector-codes';
@@ -16,7 +16,7 @@ interface IBody {
 	name: string;
 };
 
-describe('create bucket spec', () => {
+describe('delete bucket spec', () => {
 	let agentClient: superTest.SuperAgentTest;
 	let bucketRepo: IBucketRepository;
 	let db: IMongooseClient;
@@ -32,22 +32,15 @@ describe('create bucket spec', () => {
 		await db.clearData();
 		agentClient = superTest.agent(new App().app);
 		bucketRepo = defaultContainer.get<IBucketRepository>(InjectorCodes.I_BUCKET_REPO);
-		
-		// await bucketRepo.delete(defaultBody.name);
 
-		// defaultContainer.rebind<ICustomStorageClient>(commonInjectorCodes.I_STORAGE_CLIENT).to(MockBucket);
+		entity = new BucketEntity();
+    	entity.name = defaultBody.name;
+    	entity.creator = new ObjectId().toHexString();
 
-		const storageClient = mock<ICustomStorageClient>();
-		storageClient.createBucket.mockResolvedValue();
-		defaultContainer.rebind<ICustomStorageClient>(commonInjectorCodes.I_STORAGE_CLIENT).toConstantValue(storageClient);
-
-		// entity = new BucketEntity();
-		// entity.platform = 'LUNA';
-		// entity.bucketId = new ObjectId().toHexString();
-		// entity.creator = new ObjectId().toHexString();
-		// entity.name = 'BBB';
-		// entity.destination = '/XXX/BBBB';
-		// entity = await bucketRepo.update(entity) as BucketEntity;
+		storageBucket = new CustomStorageBucket();
+    	storageBucket.bucketName = defaultBody.name;
+	
+		await bucketRepo.create(entity, storageBucket);
 		done();
 	});
 	afterAll(async (done) => {
@@ -65,13 +58,11 @@ describe('create bucket spec', () => {
 		test.only('success', async () => {
 			const endpoint = util.format(_ENDPOINT, defaultBody.name);
 			const res = await agentClient
-				.post(endpoint)
-				.send(defaultBody);
+				.delete(endpoint);
 
 			expect(res.status).toBe(200);
 			const bucket = await bucketRepo.findOneByName(defaultBody.name) as BucketEntity;
-			expect(bucket).toBeTruthy();
-			expect(bucket.name).toBe(defaultBody.name);
+			expect(bucket).toBeUndefined();
 		});
 	});
 });

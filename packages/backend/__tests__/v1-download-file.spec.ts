@@ -2,7 +2,7 @@ import * as util from 'util';
 import { ObjectId } from 'mongodb';
 import * as superTest from 'supertest';
 import { mock } from 'jest-mock-extended';
-import { defaultContainer, IMongooseClient, CustomStorageBucket, CustomStorageFile, commonInjectorCodes } from '@demo/app-common';
+import { CustomUtils, defaultContainer, IMongooseClient, CustomStorageBucket, CustomStorageFile, commonInjectorCodes, defConf } from '@demo/app-common';
 import { AppInitializer } from '../src/bootstrap/app-initializer';
 import { App } from '../src/bootstrap/app';
 import { InjectorCodes } from '../src/domain/enums/injector-codes';
@@ -10,12 +10,14 @@ import { IBucketRepository } from '../src/domain/repositories/i-bucket-repositor
 import { IFileRepository } from '../src/domain/repositories/i-file-repository';
 import { BucketEntity } from '../src/domain/entities/bucket-entity';
 import { FileEntity } from '../src/domain/entities/file-entity';
+import jwt from 'jsonwebtoken';
 import { MockBucket } from '../__mocks__/mock-bucket';
 
 const _ENDPOINT = '/api/v1/storage/b/%s/o/%s';
 
 interface IBody {
 	name: string;
+	policy: any;
 };
 
 describe('download file spec', () => {
@@ -24,12 +26,28 @@ describe('download file spec', () => {
 	let fileRepo: IFileRepository;
 	let db: IMongooseClient;
 	const defaultBody: IBody = {
-		name: 'andy-bucket-7',
+		name: 'andy-bucket-test',
+		policy: [
+			{
+				"principle" : {
+					"companyId" : "58ff",
+				},
+				"resource" : [
+					"upload/{companyId}/{account}/"
+				],
+			}
+		],
+	};
+	const tokenPayload = {
+		platform: 'luna',
+		companyId: '58ff',
+		account: 'andy',
 	};
 	let bucket: BucketEntity;
 	let file: FileEntity;
 	let storageBucket: CustomStorageBucket;
 	let storageFile: CustomStorageFile;
+	let fileId = '';
 	beforeAll(async (done) => {
 		await AppInitializer.tryDbClient();
 		AppInitializer.tryInjector();
@@ -40,30 +58,35 @@ describe('download file spec', () => {
 		fileRepo = defaultContainer.get<IFileRepository>(InjectorCodes.I_FILE_REPO);
 
 		bucket = new BucketEntity();
+		bucket.platform = 'luna';
     	bucket.name = defaultBody.name;
-    	bucket.creator = new ObjectId().toHexString();
+		bucket.policy = defaultBody.policy;
 
 		storageBucket = new CustomStorageBucket();
     	storageBucket.bucketName = defaultBody.name;
 		
+		// 刪除儲存桶
+		await bucketRepo.delete(bucket.name);
+
 		// 建立儲存桶
 		bucket = await bucketRepo.create(bucket, storageBucket) as BucketEntity;
 
+		// 上傳檔案
 		storageFile = new CustomStorageFile();
 		storageFile.bucketName = storageBucket.bucketName;
     	storageFile.source = './b_list.xlsx';
-    	storageFile.target = 'john/b_list.xlsx';
+    	storageFile.target = 'upload/58ff/andy/b_list.xlsx';
 
 		file = new FileEntity();
 		file.generateFileName();
     	file.bucketId = bucket.id;
-    	file.platform = 'Luna';
-    	file.destination = 'john/b_list.xlsx';
+    	file.platform = 'luna';
+    	file.destination = 'upload/58ff/andy/b_list.xlsx';
 		file.mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 		file.size = 7416;
-    	file.creator = new ObjectId().toHexString();
 
-		await fileRepo.upload(file, storageFile);
+		const fileResult = await fileRepo.upload(file, storageFile);
+		fileId = fileResult?.id as string;
 
 		done();
 	});
@@ -75,19 +98,63 @@ describe('download file spec', () => {
 		test.todo('[2000x] data欄位缺少');
 	});
 	describe('validation rules', () => {
-		test.todo('[2000x] 權限不足');
-		test.todo('[2000x] 儲存桶名稱不正確');
+		test.only('[3002] 檔案不存在', async () => {
+			const fakeFileId = '61e927b2d0b69fc0fcb75c0b';
+			const endpoint = util.format(_ENDPOINT, defaultBody.name, fakeFileId);
+			const payload = CustomUtils.deepClone<any>(tokenPayload);
+			let token = jwt.sign(
+				payload,
+				defConf.TOKEN_SECRET,
+				{ expiresIn : defConf.TOKEN_DURATION }
+			);
+			const res = await agentClient
+				.get(endpoint)
+				.set('Authorization', `Bearer ${token}`);
+
+			expect(res.status).toBe(400);
+			expect(res.body).toEqual({
+				traceId: expect.any(String),
+				code: 3002,
+				message: '檔案不存在',
+			});
+		});
+		test.only('[5001] 權限被拒絕', async () => {
+			const endpoint = util.format(_ENDPOINT, defaultBody.name, fileId);
+			const payload = CustomUtils.deepClone<any>(tokenPayload);
+			payload.account = 'fakeUser';
+
+			let token = jwt.sign(
+				payload,
+				defConf.TOKEN_SECRET,
+				{ expiresIn : defConf.TOKEN_DURATION }
+			);
+			const res = await agentClient
+				.get(endpoint)
+				.set('Authorization', `Bearer ${token}`);
+
+			expect(res.status).toBe(400);
+			expect(res.body).toEqual({
+				traceId: expect.any(String),
+				code: 5001,
+				message: '權限被拒絕',
+			});
+		});
 	});
 	describe('success', () => {
-		// test.todo('[2000x] 權限不足');
 		test.only('success', async () => {
-			const endpoint = util.format(_ENDPOINT, defaultBody.name);
+			const endpoint = util.format(_ENDPOINT, defaultBody.name, fileId);
+			const payload = CustomUtils.deepClone<any>(tokenPayload);
+			let token = jwt.sign(
+				payload,
+				defConf.TOKEN_SECRET,
+				{ expiresIn : defConf.TOKEN_DURATION }
+			);
+
 			const res = await agentClient
-				.delete(endpoint);
+				.get(endpoint)
+				.set('Authorization', `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
-			const bucket = await bucketRepo.findOneByName(defaultBody.name) as BucketEntity;
-			expect(bucket).toBeUndefined();
 		});
 	});
 });

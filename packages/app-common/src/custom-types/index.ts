@@ -45,6 +45,6 @@ export interface ICustomStorageClient {
 	checkBucketName(name: string): Promise<boolean>;
 	deleteBucket(name: string): Promise<boolean>;
 	createFile(storageFile: CustomStorageFile): Promise<void>;
-	deleteObject(storageFile: CustomStorageFile): Promise<void>;
+	deleteFile(storageFile: CustomStorageFile): Promise<void>;
 	download(storageFile: CustomStorageFile): Promise<Buffer>;
 }

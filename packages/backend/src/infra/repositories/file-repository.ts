@@ -14,9 +14,11 @@ import {
 	lazyInjectNamed,
 } from '@demo/app-common';
 import { ModelCodes } from '../../domain/enums/model-codes';
+import { ErrorCodes } from '../../domain/enums/error-codes';
 import { IFileDocument } from '../../infra/orm-models';
 import { FileEntity } from '../../domain/entities/file-entity';
 import { IFileRepository } from '../../domain/repositories/i-file-repository';
+import { BucketEntity } from '../../domain/entities/bucket-entity';
 
 @injectable()
 export class FileRepository implements IFileRepository {
@@ -118,7 +120,68 @@ export class FileRepository implements IFileRepository {
     		throw err;
     	}
     }
-	download = async (file: FileEntity, storageFile: CustomStorageFile): Promise<Buffer> => {
+	list = async (entity: TNullable<FileEntity>): Promise<TNullable<FileEntity[]>> => {
+		if (!entity) {
+    		return undefined;
+    	}
+		const platform = entity?.platform;
+		const bucketId = entity?.bucketId;
+		if (!CustomValidator.nonEmptyString(platform)) {
+			return undefined;
+		}
+		try {
+    		const col = this._defaultClient?.getModel<IFileDocument>(ModelCodes.FILE);
+    		const q = {
+    			platform,
+				bucketId,
+				valid: true,
+    		};
+    		const docs: IFileDocument[] = await col?.find(q).lean() as IFileDocument[];
+			const results: TNullable<FileEntity[]> = [];
+			for (const doc of docs) {
+				results.push(this._transform(doc) as FileEntity);
+			}
+    		return results;
+    	} catch (ex) {
+    		const err = CustomError.fromInstance(ex)
+    			.useError(cmmErr.ERR_EXEC_DB_FAIL);
+
+    		LOGGER.error(`DB operations fail, ${err.stack}`);
+    		throw err;
+    	}
+	}
+	delete = async (bucket: BucketEntity, file: FileEntity, storageFile: CustomStorageFile, token: any): Promise<void> => {
+		const matchPolicy = this._checkPolicy(bucket.policy, file.destination, token);
+		if (!matchPolicy) {
+			throw new CustomError(ErrorCodes.PERMISSION_IS_DENY);
+		}
+		try {
+			if (!this._client) {
+				throw new Error('_client is required');
+			}
+
+			await this._client?.deleteFile(storageFile);
+
+			const col = this._defaultClient?.getModel<IFileDocument>(ModelCodes.FILE);
+			const obj = {
+				valid: false,
+				invalidTime: new Date(),
+			};
+			await col?.updateOne({ id: file.id }, { $set: obj });
+
+		} catch (ex) {
+    		const err = CustomError.fromInstance(ex)
+    			.useError(cmmErr.ERR_EXEC_DB_FAIL);
+
+    		LOGGER.error(`DB operations fail, ${err.stack}`);
+    		throw err;
+    	}
+	}
+	download = async (bucket: BucketEntity, file: FileEntity, storageFile: CustomStorageFile, token: any): Promise<Buffer> => {
+		const matchPolicy = this._checkPolicy(bucket.policy, file.destination, token);
+		if (!matchPolicy) {
+			throw new CustomError(ErrorCodes.PERMISSION_IS_DENY);
+		}
 		try {
 			if (!this._client) {
 				throw new Error('_client is required');
@@ -133,6 +196,46 @@ export class FileRepository implements IFileRepository {
     		LOGGER.error(`DB operations fail, ${err.stack}`);
     		throw err;
     	}
+	}
+	private _checkPolicy = (policy: any[], target: string, token: any): Boolean => {
+		// 是否有符合的Policy
+		let matchPolicy = false;
+		// 目標路徑取到最後一層目錄位置(Ex: upload/58aff/xxxx.xlsx -> upload/58aff)
+		target = target.substring(0, target.lastIndexOf('/'));
+
+		for (const _policy of policy) {
+			const resource = _policy.resource as string[];
+			const principle = _policy.principle;
+			console.log('principle: ', principle);
+			for (let path of resource) {
+				// 資源路徑取到最後一層目錄位置(Ex: upload/58aff/ -> upload/58aff)
+				path = path.substring(0, path.lastIndexOf('/'));
+				// 將路徑裡的patern做替換(使用principal的內容)
+				if (principle) {
+					path = this._replacePathByPatern(path, principle);
+				}
+				// 將路徑裡的patern做替換(使用token的內容)
+				path = this._replacePathByPatern(path, token);
+				console.log('path: ', path);
+				if (target.indexOf(path) > -1) {
+					matchPolicy = true;
+					break;
+				}
+			}
+			if (matchPolicy) {
+				break;
+			}
+		}
+		console.log('matchPolicy: ', matchPolicy);
+		return matchPolicy;
+	}
+	private _replacePathByPatern = (path: string, patern: any): string => {
+		for (const key of Object.keys(patern) as string[]) {
+			const value = patern[key];
+			const regexp = new RegExp(`{${key}}`, 'g');
+			path = path.replace(regexp, value);
+		}
+		return path;
 	}
 
     private _transform = (doc: TNullable<IFileDocument>): TNullable<FileEntity> => {

@@ -46,6 +46,7 @@ export const fileSchema = new Schema({
 	},
 	name: {
 		type: String,
+
 		required: true,
 	},
 	destination: {
@@ -65,6 +66,12 @@ export const fileSchema = new Schema({
 	type: {
 		type: String,
 		default: '',
+	},
+	checksum: {
+		type: String,
+	},
+	checksumMethod: {
+		type: String,
 	},
 }, {
 	versionKey: false,

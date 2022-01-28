@@ -272,6 +272,38 @@ paths:
                     type: string
                   result:
                     $ref: "#/components/schemas/ResponseEmptyResult"
+    get:
+      summary: 查詢物件列表
+      description: ''
+      security:
+        - bearerAuth: []
+      tags:
+        - 物件
+      parameters:
+        - in: path
+          name: bucketName
+          description: '儲存桶名稱'
+          required: true
+          schema:
+            type: string
+          example: andy-bucket-test
+      responses:
+        "200":
+          description: Success
+          content:
+            "*/*":
+              schema:
+                type: object
+                properties:
+                  traceId:
+                    type: string
+                  code:
+                    type: integer
+                    format: Int32
+                  message:
+                    type: string
+                  result:
+                    $ref: "#/components/schemas/ResponseEmptyResult"   
   /storage/b/{bucketName}/o/{fileId}:
     get:
       summary: 下載物件
@@ -571,8 +603,8 @@ components:
           type: string
           description: 可用資源
       example: {
-        "principal": { "companyId": "58ff" },
-        "resource": [ ". /${companyId}/${account}/*" ]
+        "principle": { "companyId": "58ff" },
+        "resource": [ ". /{companyId}/{account}/*" ]
       }
     Cors:
       type: object

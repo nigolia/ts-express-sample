@@ -8,11 +8,14 @@ export enum ErrorCodes {
     CLIENT_CALLBACK_INVALID  = 'CLIENT_CALLBACK_INVALID',
     NOT_EXIST_CHAT_ROOM = 'NOT_EXIST_CHAT_ROOM',
     CHAT_ROOM_IS_CLOSE = 'CHAT_ROOM_IS_CLOSE',
+	PERMISSION_IS_DENY = 'PERMISSION_IS_DENY',
 	FILE_NAME_IS_EMPTY = 'FILE_NAME_IS_EMPTY',
 	FILE_IS_NOT_EXISTS = 'FILE_IS_NOT_EXISTS',
 	BUCKET_IS_NOT_EXISTS = 'BUCKET_IS_NOT_EXISTS',
 	FILE_IS_REQUIRED = 'FILE_IS_REQUIRED',
-	BUCKET_IS_ALREADY_EXISTS = 'BUCKET_IS_ALREADY_EXISTS'
+	BUCKET_IS_ALREADY_EXISTS = 'BUCKET_IS_ALREADY_EXISTS',
+	BUCKET_NAME_IS_REQUIRED = 'BUCKET_NAME_IS_REQUIRED',
+	FILE_ID_IS_REQUIRED = 'FILE_ID_IS_REQUIRED'
 };
 
 const _codes: Array<ICodeObject> = [
@@ -77,6 +80,12 @@ const _codes: Array<ICodeObject> = [
 		code: 3003,
 	},
 	{
+		alias: ErrorCodes.FILE_ID_IS_REQUIRED,
+		httpStatus: HttpCodes.BAD_REQ,
+		message: '參數缺少檔案ID',
+		code: 3004,
+	},
+	{
 		alias: ErrorCodes.BUCKET_IS_NOT_EXISTS,
 		httpStatus: HttpCodes.BAD_REQ,
 		message: '儲存桶不存在',
@@ -87,6 +96,18 @@ const _codes: Array<ICodeObject> = [
 		httpStatus: HttpCodes.BAD_REQ,
 		message: '儲存桶名稱重複',
 		code: 4002,
+	},
+	{
+		alias: ErrorCodes.BUCKET_NAME_IS_REQUIRED,
+		httpStatus: HttpCodes.BAD_REQ,
+		message: '參數缺少儲存桶名稱',
+		code: 4003,
+	},
+	{
+		alias: ErrorCodes.PERMISSION_IS_DENY,
+		httpStatus: HttpCodes.BAD_REQ,
+		message: '權限被拒絕',
+		code: 5001,
 	}
 ];
 

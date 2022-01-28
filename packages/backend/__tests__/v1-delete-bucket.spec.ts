@@ -21,7 +21,7 @@ describe('delete bucket spec', () => {
 	let bucketRepo: IBucketRepository;
 	let db: IMongooseClient;
 	const defaultBody: IBody = {
-		name: 'andy-bucket-7',
+		name: 'andy-bucket-test',
 	};
 	let entity: BucketEntity;
 	let storageBucket: CustomStorageBucket;

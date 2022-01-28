@@ -9,6 +9,7 @@ interface IConfig {
 	ENABLE_CACHE: boolean,
 	ENABLE_WS: boolean,
 	TOKEN_SECRET: string,
+	TOKEN_DURATION: string,
 	DEFAULT_MONGO: {
 		URI: string;
 		USER?: string;

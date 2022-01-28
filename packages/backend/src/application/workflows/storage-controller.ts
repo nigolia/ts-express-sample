@@ -99,7 +99,7 @@ export class StorageController {
     	await next();
 	}
 
-	public listBucket = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
+	public listBuckets = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
 		const { platform } : { platform: string } = req.token;
 
 		const bucket = new BucketEntity();
@@ -155,16 +155,19 @@ export class StorageController {
     }
 
     public downloadFile = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<any> => {
-    	const storageFile = new CustomStorageFile();
-    	storageFile.bucketName = req.params.bucketName;
-
+    	const bucketName = req.params.bucketName;
     	const fileId = req.params.fileId;
+
+    	const storageFile = new CustomStorageFile();
+    	storageFile.bucketName = bucketName;
+
+    	const bucket = await this._repoBucket?.findOneByName(bucketName);
 		
     	const file = await this._repoFile?.findOne(fileId) as FileEntity;
     	if (!file) {
     		throw new CustomError(ErrorCodes.FILE_IS_NOT_EXISTS);
     	}
-    	const result = await this._repoFile?.download(file, storageFile) as Buffer;
+    	const result = await this._repoFile?.download(bucket, file, storageFile, req.token) as Buffer;
 
     	res.set('Content-Type', `${file.mimetype};charset=UTF-8`);
     	res.set('Content-Disposition', `attachment; filename=${file.name}`);
@@ -192,7 +195,49 @@ export class StorageController {
     	await next();
     }
 
-    public static build(): Router {
+	public listFiles = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
+		const { platform } : { platform: string } = req.token;
+		const bucketName = req.params.bucketName;
+
+		const bucket = await this._repoBucket?.findOneByName(bucketName);
+
+		// check bucket is exists
+		if (!bucket || bucket.platform !== platform) {
+			throw new CustomError(ErrorCodes.BUCKET_IS_NOT_EXISTS);
+		}
+	
+		const file = new FileEntity();
+		file.platform = platform;
+    	file.bucketId = bucket.id;
+	
+		const results = await this._repoFile?.list(file);
+
+		res.locals['result'] = new CustomResult().withResult(results);
+    	await next();
+	}
+
+	public deleteFile = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
+		const fileId: string = req.params.fileId;
+		const bucketName = req.params.bucketName;	
+
+    	const bucket = await this._repoBucket?.findOneByName(bucketName);
+		
+    	const file = await this._repoFile?.findOne(fileId) as FileEntity;
+    	if (!file) {
+    		throw new CustomError(ErrorCodes.FILE_IS_NOT_EXISTS);
+    	}
+
+		const storageFile = new CustomStorageFile();
+    	storageFile.bucketName = bucketName;
+		storageFile.target = file.destination;
+
+    	await this._repoFile?.delete(bucket, file, storageFile, req.token);
+	
+    	res.locals['result'] = new CustomResult().withResult();
+    	await next();
+	}
+
+	public static build(): Router {
     	const _ctrl = new StorageController();
     	const r = Router();
     	// 建立儲存桶
@@ -206,7 +251,7 @@ export class StorageController {
     		.delete(handleExpressAsync(_ctrl.deleteBucket));
     	// 查詢儲存桶列表
     	r.route('/storage/b')
-    		.get(handleExpressAsync(_ctrl.listBucket));
+    		.get(handleExpressAsync(_ctrl.listBuckets));
     	// 上傳檔案
     	r.route('/storage/b/:bucketName/o')
     		.post(ApplicationUpload.useSingleHandler(), handleExpressAsync(_ctrl.uploadFile));
@@ -216,6 +261,12 @@ export class StorageController {
     	// 更新檔案
     	r.route('/storage/b/:bucketName/o/:fileId')
     		.patch(handleExpressAsync(_ctrl.updateFile));
+		// 刪除檔案
+    	r.route('/storage/b/:bucketName/o/:fileId')
+    		.delete(handleExpressAsync(_ctrl.deleteFile));
+    	// 查詢物件列表
+    	r.route('/storage/b/:bucketName/o')
+    		.get(handleExpressAsync(_ctrl.listFiles));
     	return r;
-    }
+	}
 }

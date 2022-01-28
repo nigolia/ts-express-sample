@@ -32,7 +32,7 @@ export class CustomGcsClient implements ICustomStorageClient {
 	}
 	createFile = async (storageFile: CustomStorageFile): Promise<void> => {
 		const bucketName: string = storageFile.bucketName;
-		const target: string = `${storageFile.target}`;
+		const target: string = storageFile.target;
 		const source: string = storageFile.source;
 
 		const bucket = this._storage.bucket(bucketName);
@@ -52,8 +52,11 @@ export class CustomGcsClient implements ICustomStorageClient {
 				});
 		});
 	}
-	deleteObject(storageFile: CustomStorageFile): Promise<void> {
-		throw new Error('Method not implemented.');
+	deleteFile = async (storageFile: CustomStorageFile): Promise<void> => {
+		const bucketName: string = storageFile.bucketName;
+		const target: string = storageFile.target;
+
+		await this._storage.bucket(bucketName).file(target).delete();
 	}
 	download = async (storageFile: CustomStorageFile): Promise<Buffer> => {
 		// throw new Error('Method not implemented.');

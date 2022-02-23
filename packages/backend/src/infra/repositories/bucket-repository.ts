@@ -34,8 +34,7 @@ export class BucketRepository implements IBucketRepository {
     		// cloud storage create bucket
     		await this._client?.createBucket(storageBucket.bucketName);
     	} catch (ex) {
-    		// console.log('ex: ', JSON.stringify(ex, undefined, 2));
-    		throw new CustomError(ErrorCodes.BUCKET_IS_ALREADY_EXISTS);
+    		throw new CustomError(ErrorCodes.BUCKET_NAME_ALREADY_EXISTS);
     	}
 
     	try {
@@ -123,7 +122,6 @@ export class BucketRepository implements IBucketRepository {
 			};
     		await col?.updateOne(q, { $set: obj }).lean();
 		} catch (ex) {
-			console.log('~~~ex: ', ex);
     		const err = CustomError.fromInstance(ex)
     			.useError(cmmErr.ERR_EXEC_DB_FAIL);
 

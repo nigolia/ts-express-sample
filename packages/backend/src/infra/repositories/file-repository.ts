@@ -37,8 +37,10 @@ export class FileRepository implements IFileRepository {
     		// create file document to db
     		const col = this._defaultClient?.getModel<IFileDocument>(ModelCodes.FILE);
     		let obj = <IFileDocument>{
-    			creator: entity.creator,
-    			modifier: entity.creator,
+    			creatorId: entity.creatorId,
+    			creatorName: entity.creatorName,
+    			modifierId: entity.modifierId,
+    			modifierName: entity.modifierName,
     			bucketId: entity.bucketId,
     			platform: entity.platform,
     			name: entity.name,
@@ -71,8 +73,10 @@ export class FileRepository implements IFileRepository {
     	if (!CustomValidator.nonEmptyString(entity.id)) {
     		try {
     			let obj = <IFileDocument>{
-    				creator: entity.creator,
-    				modifier: entity.creator,
+    				creatorId: entity.creatorId,
+    				creatorName: entity.creatorName,
+    				modifierId: entity.modifierId,
+    				modifierName: entity.modifierName,
     				bucketId: entity.bucketId,
     				platform: entity.platform,
     				name: entity.name,
@@ -109,6 +113,7 @@ export class FileRepository implements IFileRepository {
     		const col = this._defaultClient?.getModel<IFileDocument>(ModelCodes.FILE);
     		const q = {
     			_id,
+    			valid: true,
     		};
     		const doc: IFileDocument = await col?.findOne(q).lean() as IFileDocument;
     		return this._transform(doc);
@@ -153,7 +158,7 @@ export class FileRepository implements IFileRepository {
 	delete = async (bucket: BucketEntity, file: FileEntity, storageFile: CustomStorageFile, token: any): Promise<void> => {
 		const matchPolicy = this._checkPolicy(bucket.policy, file.destination, token);
 		if (!matchPolicy) {
-			throw new CustomError(ErrorCodes.PERMISSION_IS_DENY);
+			throw new CustomError(ErrorCodes.PERMISSION_DENY);
 		}
 		try {
 			if (!this._client) {
@@ -180,7 +185,7 @@ export class FileRepository implements IFileRepository {
 	download = async (bucket: BucketEntity, file: FileEntity, storageFile: CustomStorageFile, token: any): Promise<Buffer> => {
 		const matchPolicy = this._checkPolicy(bucket.policy, file.destination, token);
 		if (!matchPolicy) {
-			throw new CustomError(ErrorCodes.PERMISSION_IS_DENY);
+			throw new CustomError(ErrorCodes.PERMISSION_DENY);
 		}
 		try {
 			if (!this._client) {
@@ -244,7 +249,6 @@ export class FileRepository implements IFileRepository {
     	}
     	const obj = CustomClassBuilder.build(FileEntity, doc) as FileEntity;
     	obj.id = doc._id.toString();
-    	obj.creator = doc.creator.toString();
     	obj.bucketId = doc.bucketId.toString();
     	obj.metadata = doc.metadata;
     	return obj;

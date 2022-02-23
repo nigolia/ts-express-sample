@@ -1,4 +1,4 @@
 export class PolicyValueObject {
-    public principle: string = '';
-    public resource: string = '';
+    public principle: any = {};
+    public resource: string[] = [];
 }

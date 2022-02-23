@@ -4,11 +4,15 @@ import { Types } from 'mongoose';
 export const bucketModelName = ModelCodes.BUCKET;
 
 interface IDocumentModel {
-    createTime: number,
+    createTime: Date,
     modifyTime: Date,
     invalidTime: Date,
-    creator: string,
-    modifier: string,
+    creatorId: string,
+	creatorName: string,
+    modifierId: string,
+	modifierName: string,
+	deletorId: string,
+	deletorName: string,
     valid: boolean,
     platform: string,
     name: string,
@@ -29,10 +33,22 @@ export const bucketSchema = new Schema({
 	invalidTime: {
 		type: Date,
 	},
-	creator: {
+	creatorId: {
 		type: String,
 	},
-	modifier: {
+	creatorName: {
+		type: String,
+	},
+	modifierId: {
+		type: String,
+	},
+	modifierName: {
+		type: String,
+	},
+	deletorId: {
+		type: String,
+	},
+	deletorName: {
 		type: String,
 	},
 	valid: {

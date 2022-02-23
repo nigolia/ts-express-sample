@@ -3,5 +3,6 @@ export enum ModelCodes {
     CHAT_ROOM = 'ChatRoom',
     TOKEN = 'Token',
     BUCKET = 'Bucket',
-    FILE = 'File'
+    FILE = 'File',
+    LOG = 'Log'
 };

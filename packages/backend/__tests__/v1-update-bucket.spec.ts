@@ -1,19 +1,18 @@
 import * as util from 'util';
-import { ObjectId } from 'mongodb';
 import * as superTest from 'supertest';
+import jwt from 'jsonwebtoken';
 import { mock } from 'jest-mock-extended';
-import { defaultContainer, IMongooseClient, CustomStorageBucket, commonInjectorCodes } from '@demo/app-common';
+import { CustomUtils, defaultContainer, ICustomStorageClient, IMongooseClient, CustomStorageBucket, commonInjectorCodes, defConf } from '@demo/app-common';
 import { AppInitializer } from '../src/bootstrap/app-initializer';
 import { App } from '../src/bootstrap/app';
 import { InjectorCodes } from '../src/domain/enums/injector-codes';
 import { IBucketRepository } from '../src/domain/repositories/i-bucket-repository';
 import { BucketEntity } from '../src/domain/entities/bucket-entity';
-import { MockBucket } from '../__mocks__/mock-bucket';
 
 const _ENDPOINT = '/api/v1/storage/b/%s';
 
 interface IBody {
-	name: string;
+	cors: any;
 };
 
 describe('update bucket spec', () => {
@@ -21,10 +20,23 @@ describe('update bucket spec', () => {
 	let bucketRepo: IBucketRepository;
 	let db: IMongooseClient;
 	const defaultBody: IBody = {
-		name: 'andy-bucket-7',
+		cors: [
+			{
+				"origin": "https://luna.compal-health.com",
+				"method": ["POST", "GET", "DELETE"],
+				"responseHeader": ["Content-Type"],
+				"maxAgeSeconds": 3600,
+			}
+		],
 	};
 	let entity: BucketEntity;
 	let storageBucket: CustomStorageBucket;
+	const bucketName = 'andy-bucket-test';
+	const tokenPayload = {
+		__platform: 'luna',
+		__userId: '6211e7bbb056133480280153',
+		__userName: 'andy',
+	};
 	beforeAll(async (done) => {
 		await AppInitializer.tryDbClient();
 		AppInitializer.tryInjector();
@@ -33,12 +45,16 @@ describe('update bucket spec', () => {
 		agentClient = superTest.agent(new App().app);
 		bucketRepo = defaultContainer.get<IBucketRepository>(InjectorCodes.I_BUCKET_REPO);
 
+		const storageClient = mock<ICustomStorageClient>();
+		storageClient.createBucket.mockResolvedValue();
+		defaultContainer.rebind<ICustomStorageClient>(commonInjectorCodes.I_STORAGE_CLIENT).toConstantValue(storageClient);
+
 		entity = new BucketEntity();
-    	entity.name = defaultBody.name;
-    	entity.creator = new ObjectId().toHexString();
+    	entity.name = bucketName;
+		entity.platform = 'luna';
 
 		storageBucket = new CustomStorageBucket();
-    	storageBucket.bucketName = defaultBody.name;
+    	storageBucket.bucketName = bucketName;
 	
 		await bucketRepo.create(entity, storageBucket);
 		done();
@@ -47,22 +63,46 @@ describe('update bucket spec', () => {
 		done();
 	});
 	describe('Required fileds', () => {
-		test.todo('[2000x] file欄位缺少');
-		test.todo('[2000x] data欄位缺少');
 	});
 	describe('validation rules', () => {
-		test.todo('[2000x] 權限不足');
-		test.todo('[2000x] 儲存桶名稱不正確');
+		test.only('[4003] 儲存桶不存在', async () => {
+			const fakeBucketName = 'andy-bucket-test-fake';
+			const endpoint = util.format(_ENDPOINT, fakeBucketName);
+			const payload = CustomUtils.deepClone<any>(tokenPayload);
+			let token = jwt.sign(
+				payload,
+				defConf.TOKEN_SECRET
+			);
+			const res = await agentClient
+				.patch(endpoint)
+				.set('Authorization', `Bearer ${token}`)
+				.send(defaultBody);
+
+			expect(res.status).toBe(400);
+			expect(res.body).toEqual({
+				traceId: expect.any(String),
+				code: 4003,
+				message: 'Bucket not found',
+			});
+		});
 	});
 	describe('success', () => {
 		test.only('success', async () => {
-			const endpoint = util.format(_ENDPOINT, defaultBody.name);
+			const endpoint = util.format(_ENDPOINT, bucketName);
+			const payload = CustomUtils.deepClone<any>(tokenPayload);
+			let token = jwt.sign(
+				payload,
+				defConf.TOKEN_SECRET
+			);
 			const res = await agentClient
-				.delete(endpoint);
+				.patch(endpoint)
+				.set('Authorization', `Bearer ${token}`)
+				.send(defaultBody);
 
 			expect(res.status).toBe(200);
-			const bucket = await bucketRepo.findOneByName(defaultBody.name) as BucketEntity;
-			expect(bucket).toBeUndefined();
+			const bucket = await bucketRepo.findOneByName(bucketName) as BucketEntity;
+			expect(bucket).toBeTruthy();
+			expect(bucket.cors).toStrictEqual(defaultBody.cors);
 		});
 	});
 });

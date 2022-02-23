@@ -39,12 +39,12 @@ export class StorageController {
 
     public createBucket = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
     	const bucketName: string = req.params.bucketName;
-    	const { platform } : { platform: string } = req.token;
+    	const { __platform } : { __platform: string } = req.user;
     	const { policy, cors, lifecycle } : { policy: PolicyValueObject[], cors: CorsValueObject[], lifecycle: LifecycleValueObject } = req.body;
 
     	const bucket = new BucketEntity();
     	bucket.name = bucketName;
-    	bucket.platform = platform;
+    	bucket.platform = __platform;
     	bucket.policy = policy;
     	bucket.cors = cors;
     	bucket.lifecycle = lifecycle;
@@ -64,12 +64,20 @@ export class StorageController {
 
 	public updateBucket = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
 		const bucketName: string = req.params.bucketName;
-		const { platform } : { platform: string } = req.token;
+		const { __platform } : { __platform: string } = req.user;
     	const { policy, cors, lifecycle } : { policy: PolicyValueObject[], cors: CorsValueObject[], lifecycle: LifecycleValueObject } = req.body;
+
+		// get bucket document form db
+		const checkBucket = await this._repoBucket?.findOneByName(bucketName);
+
+		// check bucket is exists
+		if (!checkBucket || checkBucket.platform !== __platform) {
+			throw new CustomError(ErrorCodes.BUCKET_NOT_FOUND);
+		}
 
 		const bucket = new BucketEntity();
     	bucket.name = bucketName;
-    	bucket.platform = platform;
+    	bucket.platform = __platform;
     	bucket.policy = policy;
     	bucket.cors = cors;
     	bucket.lifecycle = lifecycle;
@@ -82,14 +90,14 @@ export class StorageController {
 
 	public deleteBucket = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
 		const bucketName: string = req.params.bucketName;
-		const { platform } : { platform: string } = req.token;
+		const { __platform } : { __platform: string } = req.user;
 
 		// get bucket document form db
 		const bucket = await this._repoBucket?.findOneByName(bucketName);
 
 		// check bucket is exists
-		if (!bucket || bucket.platform !== platform) {
-			throw new CustomError(ErrorCodes.BUCKET_IS_NOT_EXISTS);
+		if (!bucket || bucket.platform !== __platform) {
+			throw new CustomError(ErrorCodes.BUCKET_NOT_FOUND);
 		}
 
 		// delete bucket from cloud storage
@@ -100,10 +108,9 @@ export class StorageController {
 	}
 
 	public listBuckets = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
-		const { platform } : { platform: string } = req.token;
-
+		const { __platform } : { __platform: string } = req.user;
 		const bucket = new BucketEntity();
-		bucket.platform = platform;
+		bucket.platform = __platform;
 
 		const results = await this._repoBucket?.list(bucket);
 
@@ -112,7 +119,7 @@ export class StorageController {
 	}
 
     public uploadFile = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
-    	const { platform } : { platform: string } = req.token;
+    	const { __platform } : { __platform: string } = req.user;
     	const mReq = new UploadFileRequest();
     	mReq.bucketName = req.params.bucketName;
     	mReq.data = req.body.data;
@@ -121,20 +128,20 @@ export class StorageController {
     	const uploadFile = req.file;
 
     	if (!uploadFile) {
-    		throw new CustomError(ErrorCodes.FILE_IS_REQUIRED);
+    		throw new CustomError(ErrorCodes.MISSING_FILE);
     	}
 
     	// check bucket is exists
     	const bucket = await this._repoBucket?.findOneByName(mReq.bucketName);
-    	if (!bucket || bucket.platform !== platform) {
-    		throw new CustomError(ErrorCodes.BUCKET_IS_NOT_EXISTS);
+    	if (!bucket || bucket.platform !== __platform) {
+    		throw new CustomError(ErrorCodes.BUCKET_NOT_FOUND);
     	}
 
     	const file = new FileEntity();
     	file.name = uploadFile.originalname;
     	file.generateFileName();
     	file.bucketId = bucket.id;
-    	file.platform = platform;
+    	file.platform = __platform;
     	file.destination = `${mReq.target}/${file.name}`;
     	file.mimetype = uploadFile.mimetype;
     	file.size = uploadFile.size;
@@ -165,25 +172,27 @@ export class StorageController {
 		
     	const file = await this._repoFile?.findOne(fileId) as FileEntity;
     	if (!file) {
-    		throw new CustomError(ErrorCodes.FILE_IS_NOT_EXISTS);
+    		throw new CustomError(ErrorCodes.FILE_NOT_FOUND);
     	}
-    	const result = await this._repoFile?.download(bucket, file, storageFile, req.token) as Buffer;
+    	const result = await this._repoFile?.download(bucket, file, storageFile, req.user) as Buffer;
 
     	res.set('Content-Type', `${file.mimetype};charset=UTF-8`);
     	res.set('Content-Disposition', `attachment; filename=${file.name}`);
 
-    	return res.send(result);
+    	// return res.send(result);
+    	return res.end(result);
     }
+
 
     public updateFile = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
     	const fileId: string = req.params.fileId;
     	const { name, metadata } : { name: string, metadata: any } = req.body;
 
-    	CustomValidator.nonEmptyString(name, ErrorCodes.FILE_NAME_IS_EMPTY);
+    	CustomValidator.nonEmptyString(name, ErrorCodes.MISSING_FILE_NAME);
 
     	const file = await this._repoFile?.findOne(fileId);
     	if (!file) {
-    		throw new CustomError(ErrorCodes.FILE_IS_NOT_EXISTS);
+    		throw new CustomError(ErrorCodes.FILE_NOT_FOUND);
     	}
 
     	file.name = name;
@@ -196,18 +205,21 @@ export class StorageController {
     }
 
 	public listFiles = async (req: ICustomExpressRequest, res: Response, next: NextFunction): Promise<void> => {
-		const { platform } : { platform: string } = req.token;
+		const { __platform } : { __platform: string } = req.user;
 		const bucketName = req.params.bucketName;
+
+		// console.log('req.params: ', JSON.stringify(req.params, undefined, 2));
+		// console.log('req.query: ', JSON.stringify(req.query, undefined, 2));
 
 		const bucket = await this._repoBucket?.findOneByName(bucketName);
 
 		// check bucket is exists
-		if (!bucket || bucket.platform !== platform) {
-			throw new CustomError(ErrorCodes.BUCKET_IS_NOT_EXISTS);
+		if (!bucket || bucket.platform !== __platform) {
+			throw new CustomError(ErrorCodes.BUCKET_NOT_FOUND);
 		}
 	
 		const file = new FileEntity();
-		file.platform = platform;
+		file.platform = __platform;
     	file.bucketId = bucket.id;
 	
 		const results = await this._repoFile?.list(file);
@@ -224,14 +236,14 @@ export class StorageController {
 		
     	const file = await this._repoFile?.findOne(fileId) as FileEntity;
     	if (!file) {
-    		throw new CustomError(ErrorCodes.FILE_IS_NOT_EXISTS);
+    		throw new CustomError(ErrorCodes.FILE_NOT_FOUND);
     	}
 
 		const storageFile = new CustomStorageFile();
     	storageFile.bucketName = bucketName;
 		storageFile.target = file.destination;
 
-    	await this._repoFile?.delete(bucket, file, storageFile, req.token);
+    	await this._repoFile?.delete(bucket, file, storageFile, req.user);
 	
     	res.locals['result'] = new CustomResult().withResult();
     	await next();

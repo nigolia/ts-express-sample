@@ -20,7 +20,7 @@ interface IBody {
 	metadata: any;
 };
 
-describe('Update file spec', () => {
+describe('Delete file spec', () => {
 	let agentClient: superTest.SuperAgentTest;
 	let bucketRepo: IBucketRepository;
 	let fileRepo: IFileRepository;
@@ -38,6 +38,8 @@ describe('Update file spec', () => {
 		__platform: 'luna',
 		__userId: '6211e7bbb056133480280153',
 		__userName: 'andy',
+		companyId: '58ff',
+		account: 'andy',
 	};
 	beforeAll(async (done) => {
 		await AppInitializer.tryDbClient();
@@ -51,11 +53,22 @@ describe('Update file spec', () => {
 		const storageClient = mock<ICustomStorageClient>();
 		storageClient.createBucket.mockResolvedValue();
 		storageClient.createFile.mockResolvedValue();
+		storageClient.deleteFile.mockResolvedValue();
 		defaultContainer.rebind<ICustomStorageClient>(commonInjectorCodes.I_STORAGE_CLIENT).toConstantValue(storageClient);
 
 		bucket = new BucketEntity();
     	bucket.name = bucketName;
 		bucket.platform = 'luna';
+		bucket.policy = [
+			{
+				"principle" : {
+					"companyId" : "58ff",
+				},
+				"resource" : [
+					"upload/{companyId}/{account}/"
+				],
+			}
+		];
 
 		storageBucket = new CustomStorageBucket();
     	storageBucket.bucketName = bucketName;
@@ -124,15 +137,12 @@ describe('Update file spec', () => {
 				defConf.TOKEN_SECRET
 			);
 			const res = await agentClient
-				.patch(endpoint)
-				.set('Authorization', `Bearer ${token}`)
-				.send(defaultBody);
+				.delete(endpoint)
+				.set('Authorization', `Bearer ${token}`);
 
 			expect(res.status).toBe(200);
 			const file = await fileRepo.findOne(fileId) as FileEntity;
-			expect(file).toBeTruthy();
-			expect(file.name).toBe(defaultBody.name);
-			expect(file.metadata).toEqual(defaultBody.metadata);
+			expect(file).toBeUndefined();
 		});
 	});
 });

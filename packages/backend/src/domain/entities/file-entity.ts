@@ -1,7 +1,12 @@
 import { CustomUtils } from '@demo/app-common';
 export class FileEntity {
     public id: string = '';
-    public creator: string = '';
+    public creatorId: string = '';
+	public creatorName: string = '';
+    public modifierId: string = '';
+	public modifierName: string = '';
+	public deletorId: string = '';
+	public deletorName: string = '';
     public valid: boolean = true;
     public platform: string = '';
     public bucketId: string = '';

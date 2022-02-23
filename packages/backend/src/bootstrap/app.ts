@@ -1,6 +1,7 @@
 import * as path from 'path';
 import jwt from 'express-jwt';
 import express from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { TNullable, defConf } from '@demo/app-common';
 import { AppInterceptor } from './app-interceptor';
 import * as appTracer from './app-request-tracer';
@@ -15,7 +16,7 @@ export class App {
 	private _jwtCheck = jwt({
 		secret: defConf.TOKEN_SECRET,
 		algorithms: ['HS256'],
-		requestProperty: 'token',
+		requestProperty: 'user',
 	});
 
 	constructor() {
@@ -43,7 +44,10 @@ export class App {
 		const v1Router = new V1Router();
 
 		// token handle
-		this._app.use('/', this._jwtCheck.unless({path: []}));
+		this._app.use('/', this._jwtCheck.unless({path: [
+			'/api/v1',
+			'/api/v1/client-auth'
+		]}));
 		this._app.use(v1Router.prefix, v1Router.router);
 		this._app.use(AppInterceptor.completeHandler);
 		this._app.use(AppInterceptor.notFoundHandler);

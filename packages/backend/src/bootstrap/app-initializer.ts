@@ -26,6 +26,8 @@ import { IFileRepository } from '../domain/repositories/i-file-repository';
 import { FileRepository } from '../infra/repositories/file-repository';
 import { IBucketRepository } from '../domain/repositories/i-bucket-repository';
 import { BucketRepository } from '../infra/repositories/bucket-repository';
+import { ILogRepository } from '../domain/repositories/i-log-repository';
+import { LogRepository } from '../infra/repositories/log-repository';
 export class AppInitializer {
 
 	static async tryDbClient(): Promise<void> {
@@ -89,6 +91,8 @@ export class AppInitializer {
 			.bind<IFileRepository>(InjectorCodes.I_FILE_REPO).to(FileRepository).inSingletonScope();
 		defaultContainer
 			.bind<IBucketRepository>(InjectorCodes.I_BUCKET_REPO).to(BucketRepository).inSingletonScope();
+		defaultContainer
+			.bind<ILogRepository>(InjectorCodes.I_LOG_REPO).to(LogRepository).inSingletonScope();
 
 		/** socket handlers */
 		defaultContainer

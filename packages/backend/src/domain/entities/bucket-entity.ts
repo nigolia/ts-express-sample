@@ -4,8 +4,12 @@ import { LifecycleValueObject } from '../value-objects/lifecycle-value-object';
 
 export class BucketEntity {
     public id: string = '';
-    public creator: string = '';
-    public modifier: string = '';
+    public creatorId: string = '';
+	public creatorName: string = '';
+    public modifierId: string = '';
+	public modifierName: string = '';
+	public deletorId: string = '';
+	public deletorName: string = '';
     public valid: boolean = true;
     public platform: string = '';
     public name: string = '';

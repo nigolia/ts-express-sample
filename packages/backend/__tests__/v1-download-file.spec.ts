@@ -1,8 +1,9 @@
 import * as util from 'util';
 import { ObjectId } from 'mongodb';
 import * as superTest from 'supertest';
+import * as fs from 'fs';
 import { mock } from 'jest-mock-extended';
-import { CustomUtils, defaultContainer, IMongooseClient, CustomStorageBucket, CustomStorageFile, commonInjectorCodes, defConf } from '@demo/app-common';
+import { CustomUtils, defaultContainer, ICustomStorageClient, IMongooseClient, CustomStorageBucket, CustomStorageFile, commonInjectorCodes, defConf } from '@demo/app-common';
 import { AppInitializer } from '../src/bootstrap/app-initializer';
 import { App } from '../src/bootstrap/app';
 import { InjectorCodes } from '../src/domain/enums/injector-codes';
@@ -57,6 +58,14 @@ describe('download file spec', () => {
 		bucketRepo = defaultContainer.get<IBucketRepository>(InjectorCodes.I_BUCKET_REPO);
 		fileRepo = defaultContainer.get<IFileRepository>(InjectorCodes.I_FILE_REPO);
 
+		const buffer = fs.readFileSync('./b_list.xlsx');
+
+		const storageClient = mock<ICustomStorageClient>();
+		storageClient.createBucket.mockResolvedValue();
+		storageClient.createFile.mockResolvedValue();
+		storageClient.download.mockResolvedValue(buffer);
+		defaultContainer.rebind<ICustomStorageClient>(commonInjectorCodes.I_STORAGE_CLIENT).toConstantValue(storageClient);
+
 		bucket = new BucketEntity();
 		bucket.platform = 'luna';
     	bucket.name = defaultBody.name;
@@ -64,9 +73,6 @@ describe('download file spec', () => {
 
 		storageBucket = new CustomStorageBucket();
     	storageBucket.bucketName = defaultBody.name;
-		
-		// 刪除儲存桶
-		await bucketRepo.delete(bucket.name);
 
 		// 建立儲存桶
 		bucket = await bucketRepo.create(bucket, storageBucket) as BucketEntity;
@@ -98,7 +104,7 @@ describe('download file spec', () => {
 		test.todo('[2000x] data欄位缺少');
 	});
 	describe('validation rules', () => {
-		test.only('[3002] 檔案不存在', async () => {
+		test.only('[4009] 檔案不存在', async () => {
 			const fakeFileId = '61e927b2d0b69fc0fcb75c0b';
 			const endpoint = util.format(_ENDPOINT, defaultBody.name, fakeFileId);
 			const payload = CustomUtils.deepClone<any>(tokenPayload);
@@ -114,11 +120,11 @@ describe('download file spec', () => {
 			expect(res.status).toBe(400);
 			expect(res.body).toEqual({
 				traceId: expect.any(String),
-				code: 3002,
-				message: '檔案不存在',
+				code: 4009,
+				message: 'File not found',
 			});
 		});
-		test.only('[5001] 權限被拒絕', async () => {
+		test.only('[4008] 權限被拒絕', async () => {
 			const endpoint = util.format(_ENDPOINT, defaultBody.name, fileId);
 			const payload = CustomUtils.deepClone<any>(tokenPayload);
 			payload.account = 'fakeUser';
@@ -135,8 +141,8 @@ describe('download file spec', () => {
 			expect(res.status).toBe(400);
 			expect(res.body).toEqual({
 				traceId: expect.any(String),
-				code: 5001,
-				message: '權限被拒絕',
+				code: 4008,
+				message: 'Permission denied',
 			});
 		});
 	});
@@ -146,8 +152,7 @@ describe('download file spec', () => {
 			const payload = CustomUtils.deepClone<any>(tokenPayload);
 			let token = jwt.sign(
 				payload,
-				defConf.TOKEN_SECRET,
-				{ expiresIn : defConf.TOKEN_DURATION }
+				defConf.TOKEN_SECRET
 			);
 
 			const res = await agentClient

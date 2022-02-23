@@ -4,11 +4,15 @@ import { Types } from 'mongoose';
 export const fileModelName = ModelCodes.FILE;
 
 interface IDocumentModel {
-    createTime: number,
+    createTime: Date,
     modifyTime: Date,
     invalidTime: Date,
-    creator: string,
-    modifier: string,
+    creatorId: string,
+	creatorName: string,
+    modifierId: string,
+	modifierName: string,
+	deletorId: string,
+	deletorName: string,
     valid: boolean,
     platform: string,
     bucketId: string,
@@ -18,18 +22,38 @@ interface IDocumentModel {
     metadata: any,
     size: number,
     type: string,
+	checksum: string,
+	checksumMethod: string
 };
 
 export interface IFileDocument extends IDocumentModel, Document { };
 
 export const fileSchema = new Schema({
+	createTime: {
+		type: Date,
+	},
+	modifyTime: {
+		type: Date,
+	},
 	invalidTime: {
 		type: Date,
 	},
-	creator: {
+	creatorId: {
 		type: String,
 	},
-	modifier: {
+	creatorName: {
+		type: String,
+	},
+	modifierId: {
+		type: String,
+	},
+	modifierName: {
+		type: String,
+	},
+	deletorId: {
+		type: String,
+	},
+	deletorName: {
 		type: String,
 	},
 	valid: {
